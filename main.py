@@ -72,6 +72,7 @@ class User(UserBase):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    user_role: str
 
 
 class TokenData(BaseModel):
@@ -488,6 +489,47 @@ async def startup_event():
 
 
 # ---- Authentication Endpoints ----
+from fastapi import Path
+
+@app.get("/user/{user_id}/reports/summary", response_model=Dict[str, Any])
+async def get_user_report_summary(user_id: str = Path(..., description="Username of the user")):
+    """Returns pending and approved reports for a given user based on role"""
+
+    user = get_user(user_id)  # use your existing function
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    role = user.get("role")
+
+    if role == "Doctor":
+        # Doctor: can see all pending and approved reports
+        pending = get_pending_reports()
+        approved = [
+            report for report in get_all_patient_reports()
+            if report.get("approval") is True
+        ]
+        return {
+            "user": user_id,
+            "role": "Doctor",
+            "pending_reports": pending,
+            "approved_reports": approved,
+        }
+
+    elif role == "Patient":
+        # Patient: only see their own reports
+        all_reports = get_user_reports(user_id)
+        pending = [r for r in all_reports if not r.get("approval")]
+        approved = [r for r in all_reports if r.get("approval")]
+        return {
+            "user": user_id,
+            "role": "Patient",
+            "pending_reports": pending,
+            "approved_reports": approved,
+        }
+
+    else:
+        raise HTTPException(status_code=400, detail="Unknown user role")
 
 
 @app.post("/token", response_model=Token)
