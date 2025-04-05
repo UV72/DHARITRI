@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,17 +15,31 @@ import {
 } from "lucide-react";
 
 const AppHeader: React.FC = () => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const userRole = user?.role;
 
-  const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: Home },
-    { name: "Reports", href: "/reports", icon: FileText },
-    { name: "Upload", href: "/upload", icon: Upload },
-    { name: "Diet Consult", href: "/diet", icon: PieChart },
-    { name: "Profile", href: "/profile", icon: User },
-  ];
+  // Define navigation based on user role
+  const getNavigation = () => {
+    const baseNavigation = [
+      { name: "Dashboard", href: "/dashboard", icon: Home },
+      { name: "Reports", href: "/reports", icon: FileText },
+      { name: "Profile", href: "/profile", icon: User },
+    ];
+    
+    // Add patient-specific navigation items
+    if (userRole === 'Patient') {
+      baseNavigation.splice(2, 0, 
+        { name: "Upload", href: "/upload", icon: Upload },
+        { name: "Diet Consult", href: "/diet", icon: PieChart }
+      );
+    }
+    
+    return baseNavigation;
+  };
+
+  const navigation = getNavigation();
 
   const isActive = (path: string) => {
     return location.pathname === path;
