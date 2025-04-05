@@ -1,7 +1,8 @@
 import { toast } from "sonner";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"; // Use env var or fallback
+const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
+// Interfaces
 export interface LoginCredentials {
   username: string;
   password: string;
@@ -34,7 +35,7 @@ export interface UpdateReportRequest {
   approval: boolean;
 }
 
-// Helper function to handle API errors
+// Helper: handle API error
 const handleApiError = (error: any) => {
   console.error("API Error:", error);
   const message = error.response?.data?.detail || error.message || "Something went wrong. Please try again.";
@@ -42,7 +43,7 @@ const handleApiError = (error: any) => {
   return Promise.reject(error);
 };
 
-// Authentication service
+// Auth service
 export const authService = {
   login: async (credentials: LoginCredentials) => {
     try {
@@ -54,16 +55,24 @@ export const authService = {
       const response = await fetch(`${API_URL}/token`, {
         method: "POST",
         body: formData,
-        credentials: "include", // Include cookies
+        credentials: "include",
       });
 
+      console.log(response)
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || "Login failed");
       }
-
+  
       const data = await response.json();
+      
       localStorage.setItem("token", data.access_token);
+      // ✅ Save role too (optional: save full user object if needed)
+      localStorage.setItem("user", JSON.stringify({
+        username: credentials.username,
+        role: data.user_role,
+      }));
+  
       return data;
     } catch (error) {
       return handleApiError(error);
@@ -77,9 +86,9 @@ export const authService = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json",
+          Accept: "application/json",
         },
-        credentials: "include", // Include cookies
+        credentials: "include",
         body: JSON.stringify(user),
       });
 
@@ -100,22 +109,27 @@ export const authService = {
   },
 
   getToken: () => localStorage.getItem("token"),
+
+  getCurrentUser: (): RegisterUser | null => {
+    const user = localStorage.getItem("user");
+    return user ? JSON.parse(user) : null;
+  },
 };
 
-// Reports service
+// Report service
 export const reportService = {
   uploadReport: async (file: File) => {
     try {
       const formData = new FormData();
       formData.append("files", file);
 
-      console.log("Sending report upload request to:", `${API_URL}/reports/analyze`);
+      console.log("Uploading report to:", `${API_URL}/reports/analyze`);
       const response = await fetch(`${API_URL}/reports/analyze`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${authService.getToken()}`,
         },
-        credentials: "include", // Include cookies
+        credentials: "include",
         body: formData,
       });
 
@@ -124,11 +138,9 @@ export const reportService = {
         throw new Error(errorData.detail || "Report upload failed");
       }
 
-      const data = await response.json(); // ✅ Read response once
+      const data = await response.json();
       console.log("Analysis Result:", data.analysis);
-      
-      return data; // ✅ Return parsed JSON
-
+      return data;
     } catch (error) {
       return handleApiError(error);
     }
@@ -141,7 +153,7 @@ export const reportService = {
         headers: {
           Authorization: `Bearer ${authService.getToken()}`,
         },
-        credentials: "include", // Include cookies
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -153,8 +165,7 @@ export const reportService = {
       return handleApiError(error);
     }
   },
-  
-  // New functions for doctor approval
+
   getPendingReports: async () => {
     try {
       console.log("Fetching pending reports from:", `${API_URL}/reports/pending`);
@@ -162,7 +173,7 @@ export const reportService = {
         headers: {
           Authorization: `Bearer ${authService.getToken()}`,
         },
-        credentials: "include", // Include cookies
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -174,7 +185,7 @@ export const reportService = {
       return handleApiError(error);
     }
   },
-  
+
   updateReport: async (reportId: number, updateData: UpdateReportRequest) => {
     try {
       console.log("Updating report:", `${API_URL}/reports/${reportId}`);
@@ -184,7 +195,7 @@ export const reportService = {
           "Content-Type": "application/json",
           Authorization: `Bearer ${authService.getToken()}`,
         },
-        credentials: "include", // Include cookies
+        credentials: "include",
         body: JSON.stringify(updateData),
       });
 
@@ -196,10 +207,10 @@ export const reportService = {
     } catch (error) {
       return handleApiError(error);
     }
-  }
+  },
 };
 
-// Diet consultation service
+// Diet service
 export const dietService = {
   askQuestion: async (dietQuestion: DietQuestion) => {
     try {
@@ -210,7 +221,7 @@ export const dietService = {
           "Content-Type": "application/json",
           Authorization: `Bearer ${authService.getToken()}`,
         },
-        credentials: "include", // Include cookies
+        credentials: "include",
         body: JSON.stringify(dietQuestion),
       });
 
