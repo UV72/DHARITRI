@@ -1,14 +1,21 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useReports } from "@/contexts/ReportContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Upload, FileText, PieChart, Users, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ReportDisplay from "./ReportDisplay"; // Import the component
+import { Report } from "src/services/api";
+
+
 
 const Dashboard: React.FC = () => {
-  const { reports, fetchReports, loading } = useReports();
+  const { reports, fetchReports, loading, selectedReport, setSelectedReport  } = useReports();
   const { user } = useAuth();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isReportApproved, setIsReportApproved] = useState(false);
 
   // Fixed useEffect - removed fetchReports from dependency array
   useEffect(() => {
@@ -18,6 +25,14 @@ const Dashboard: React.FC = () => {
 
   const pendingReports = reports.filter(report => !report.doctor_approval).length;
   const approvedReports = reports.filter(report => report.doctor_approval).length;
+
+  const viewReportDetails = (report: Report) => {
+    setSelectedReport(report);
+    setIsDialogOpen(true);
+  };
+
+  var[PReports, setPReports] = useState(1);
+  var[AReports, setAReports] = useState(0);
 
   return (
     <div className="space-y-6">
@@ -100,13 +115,25 @@ const Dashboard: React.FC = () => {
                         {new Date(report.upload_date).toLocaleDateString()}
                       </p>
                     </div>
+
                     <div className="flex-shrink-0 ml-2">
-                      {report.doctor_approval ? (
+                      {isReportApproved ? (
                         <CheckCircle className="w-5 h-5 text-health-success" />
                       ) : (
                         <Clock className="w-5 h-5 text-health-warning" />
                       )}
                     </div>
+
+                    <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-health-primary"
+                          onClick={() => viewReportDetails(report)}
+                        >
+                          {/* <Eye className="w-4 h-4 mr-1" /> */}
+                          View
+                    </Button>
+                    
                   </div>
                 ))}
                 {reports.length > 3 && (
@@ -172,6 +199,78 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle className="text-2xl font-semibold text-health-primary">
+        {selectedReport?.report_name}
+      </DialogTitle>
+      <DialogDescription>
+        Uploaded on {selectedReport && new Date(selectedReport.upload_date).toLocaleString()}
+      </DialogDescription>
+    </DialogHeader>
+
+    <div className="mt-4 space-y-4">
+      <div className="p-4 border rounded-md bg-health-light">
+        <h3 className="mb-2 font-semibold">Analysis Result</h3>
+        <ReportDisplay selectedReport={selectedReport} />
+      </div>
+
+      {selectedReport?.doctor_notes && (
+        <div className="p-4 border rounded-md bg-muted">
+          <h3 className="mb-2 font-semibold">Doctor's Notes</h3>
+          <div className="whitespace-pre-line">{selectedReport.doctor_notes}</div>
+        </div>
+      )}
+
+      {/* Notes Input Box */}
+      <div className="p-4 border rounded-md">
+        <h3 className="mb-2 font-semibold">Notes:</h3>
+        <textarea
+          className="w-full p-2 border rounded-md focus:ring-2 focus:ring-health-primary"
+          placeholder="Enter your notes here..."
+          rows={3}
+        />
+      </div>
+
+      {/* Status Section with Approve Button */}
+      <div className="flex items-center justify-between p-2 border rounded-md">
+        <div className="flex items-center">
+          <div className="font-medium">Status:</div>
+          <div className="flex items-center ml-2">
+            {selectedReport?.doctor_approval ? (
+              <>
+                <CheckCircle className="w-4 h-4 mr-1 text-health-success" />
+                <span className="text-health-success">Approved by doctor</span>
+              </>
+            ) : (
+              <>
+                <Clock className="w-4 h-4 mr-1 text-health-warning" />
+                <span className="text-health-warning">Pending doctor's review</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Approve Button */}
+        {!selectedReport?.doctor_approval && (
+          <button
+            className="px-4 py-2 text-white bg-health-primary rounded-md hover:bg-health-dark transition"
+            onClick={() => {
+              setIsDialogOpen(false)
+              setIsReportApproved(true)
+              setAReports(++AReports)
+              setPReports(--PReports)
+
+            }}
+          >
+            Approve
+          </button>
+        )}
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
     </div>
   );
 };
