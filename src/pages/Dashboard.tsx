@@ -11,7 +11,10 @@ import { Report } from "src/services/api";
 
 
 
+
+
 const Dashboard: React.FC = () => {
+  //const userApi = authService.getCurrentUser();
   const { reports, fetchReports, loading, selectedReport, setSelectedReport  } = useReports();
   const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -25,6 +28,10 @@ const Dashboard: React.FC = () => {
 
   const pendingReports = reports.filter(report => !report.doctor_approval).length;
   const approvedReports = reports.filter(report => report.doctor_approval).length;
+
+  const role = user.role;
+  //console.log("===============================user is " )
+  //console.log(user)
 
   const viewReportDetails = (report: Report) => {
     setSelectedReport(report);
@@ -123,7 +130,25 @@ const Dashboard: React.FC = () => {
                         <Clock className="w-5 h-5 text-health-warning" />
                       )}
                     </div>
-
+                    
+                    {(role == 'Doctor')?
+                      <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-health-primary"
+                      onClick={() => viewReportDetails(report)}
+                    >
+                      {/* <Eye className="w-4 h-4 mr-1" /> */}
+                      View
+                </Button>
+                    : <div></div>}
+                    {/* {(userApi.role=="Doctor")?
+                    (
+                      
+                    ):
+                    <div></div>
+                    } */}
+                    
                     <Button
                           variant="ghost"
                           size="sm"
@@ -133,6 +158,7 @@ const Dashboard: React.FC = () => {
                           {/* <Eye className="w-4 h-4 mr-1" /> */}
                           View
                     </Button>
+                    
                     
                   </div>
                 ))}
