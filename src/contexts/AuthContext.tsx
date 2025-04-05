@@ -22,42 +22,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Check if user is already logged in
     const token = localStorage.getItem("token");
-    if (token) {
-      setUser({ token }); // In a real app, decode the token or fetch user data
+    const userStr = localStorage.getItem("user");
+    
+    if (token && userStr) {
+      try {
+        const userData = JSON.parse(userStr);
+        setUser({
+          ...userData,
+          token
+        });
+      } catch (e) {
+        // If user data is corrupted, just use the token
+        setUser({ token });
+      }
     }
     setLoading(false);
   }, []);
 
-  const login = async (username: string, password: string) => {
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append("username", username);
-      formData.append("password", password);
-      
-      const response = await fetch("http://127.0.0.1:8000/token", {
-        method: "POST",
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Login failed");
-      }
-      
-      const data = await response.json();
-      localStorage.setItem("token", data.access_token);
-      setUser({ token: data.access_token });
-      toast.success("Login successful");
-      navigate("/dashboard");
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error("Login failed. Please check your credentials.");
-      throw error;
-    } finally {
-      setLoading(false);
+  // Update your login function in AuthContext
+const login = async (username: string, password: string) => {
+  setLoading(true);
+  try {
+    const formData = new FormData();
+    formData.append("username", username);
+    formData.append("password", password);
+    
+    const response = await fetch("http://127.0.0.1:8000/token", {
+      method: "POST",
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Login failed");
     }
-  };
+    
+    const data = await response.json();
+    localStorage.setItem("token", data.access_token);
+    
+    // Store user information including role
+    const userInfo = {
+      username,
+      role: data.user_role,
+      token: data.access_token
+    };
+    
+    // Save complete user object in localStorage
+    localStorage.setItem("user", JSON.stringify({
+      username,
+      role: data.user_role
+    }));
+    
+    setUser(userInfo);
+    toast.success("Login successful");
+    navigate("/dashboard");
+  } catch (error) {
+    console.error("Login error:", error);
+    toast.error("Login failed. Please check your credentials.");
+    throw error;
+  } finally {
+    setLoading(false);
+  }
+};
 
   const register = async (username: string, email: string, password: string, role: string) => {
     setLoading(true);

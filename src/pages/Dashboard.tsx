@@ -20,12 +20,15 @@ const Dashboard: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isReportApproved, setIsReportApproved] = useState(false);
 
+  const userRole = user?.role;
+
   // Fixed useEffect - removed fetchReports from dependency array
   useEffect(() => {
     fetchReports();
     // Empty dependency array means this only runs once when component mounts
   }, []);
 
+  
   const pendingReports = reports.filter(report => !report.doctor_approval).length;
   const approvedReports = reports.filter(report => report.doctor_approval).length;
 
@@ -131,33 +134,19 @@ const Dashboard: React.FC = () => {
                       )}
                     </div>
                     
-                    {(role == 'Doctor')?
+                    {(userRole == 'Doctor')?
                       <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-health-primary"
-                      onClick={() => viewReportDetails(report)}
-                    >
-                      {/* <Eye className="w-4 h-4 mr-1" /> */}
-                      View
-                </Button>
+                        variant="ghost"
+                        size="sm"
+                        className="text-health-primary"
+                        onClick={() => viewReportDetails(report)}
+                      >
+                        {/* <Eye className="w-4 h-4 mr-1" /> */}
+                        View
+                      </Button>
                     : <div></div>}
-                    {/* {(userApi.role=="Doctor")?
-                    (
-                      
-                    ):
-                    <div></div>
-                    } */}
                     
-                    <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-health-primary"
-                          onClick={() => viewReportDetails(report)}
-                        >
-                          {/* <Eye className="w-4 h-4 mr-1" /> */}
-                          View
-                    </Button>
+                    
                     
                     
                   </div>
