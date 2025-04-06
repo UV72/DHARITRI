@@ -32,7 +32,7 @@ const AppHeader: React.FC = () => {
     if (userRole === 'Patient') {
       baseNavigation.splice(2, 0, 
         { name: "Upload", href: "/upload", icon: Upload },
-        { name: "Diet Consult", href: "/diet", icon: PieChart }
+        { name: "Chatbot", href: "/diet", icon: PieChart }
       );
     }
     

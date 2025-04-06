@@ -73,7 +73,7 @@ const Dashboard: React.FC = () => {
           <CardContent>
             <div className="flex items-center">
               <Clock className="w-6 h-6 mr-2 text-health-warning" />
-              <div className="stats-value">{pendingReports}</div>
+              <div className="stats-value">{PReports}</div>
             </div>
           </CardContent>
         </Card>
@@ -85,7 +85,7 @@ const Dashboard: React.FC = () => {
           <CardContent>
             <div className="flex items-center">
               <CheckCircle className="w-6 h-6 mr-2 text-health-success" />
-              <div className="stats-value">{approvedReports}</div>
+              <div className="stats-value">{AReports}</div>
             </div>
           </CardContent>
         </Card>
@@ -194,7 +194,7 @@ const Dashboard: React.FC = () => {
               <Link to="/diet">
                 <Button variant="outline" className="w-full border-health-primary text-health-primary hover:bg-health-muted h-24 flex flex-col">
                   <PieChart className="w-6 h-6 mb-2" />
-                  <span>Diet Consultation</span>
+                  <span>Chatbot</span>
                 </Button>
               </Link>
               <Link to="/reports">
