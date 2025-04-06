@@ -39,7 +39,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:8080",
+        "http://192.168.1.10:8080/",
         "http://192.168.1.7:8080",
+        "http://192.168.1.6:8080/",
     ],  # Allows all origins in development
     allow_credentials=True,
     allow_methods=["*"],
@@ -72,12 +74,14 @@ class User(UserBase):
 class Token(BaseModel):
     access_token: str
     token_type: str
-    user_role: str
+    user_role: str 
 
 
 class TokenData(BaseModel):
     username: Optional[str] = None
 
+class Query(BaseModel):
+    query: str
 
 class ReportAnalysisRequest(BaseModel):
     user_id: str
@@ -416,6 +420,32 @@ def send_email(doctor_email, analysis_text, pdf_content, filename):
         server.login(sender_email, sender_password)
         server.send_message(msg)
 
+def chatbot(query):
+    # Print the query to verify it's received correctly
+    print(f"Query received in chatbot function: {query}")
+    
+    prompt_template = f"""
+You are a genius doctor who can solve any queries related to medical tasks. You will be asked a question from the user, and you have to answer it.
+
+## Rules
+1. Strictly the answer must be accurate.
+2. If the question is not related to medical then say sorry. I am a DHARITRI chatbot who can answer only medical related queries.
+3. Do not give long answers.
+
+User query: {query}
+"""
+    
+    # Create the model instance (ensure the library you're using is working as expected)
+    model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3)
+    
+    # Get the response from the model
+    response = model.invoke(prompt_template)
+    
+    # Print the raw response to debug
+    print(f"Response from model: {response}")
+    
+    return response.content
+
 
 def ask_diet_question(input_question, report_text):
     """Generate response to diet-related question based on report"""
@@ -489,6 +519,35 @@ async def startup_event():
 
 
 # ---- Authentication Endpoints ----
+
+
+@app.post("/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    """Endpoint for user authentication and token generation"""
+    user = authenticate_user(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user["username"], "role": user["role"]},
+        expires_delta=access_token_expires,
+    )
+    return {"access_token": access_token, "token_type": "bearer","user_role":user["role"]}
+
+
+@app.post("/register", status_code=201)
+async def create_user(user: UserCreate):
+    """Endpoint to register a new user"""
+    if register_user(user.username, user.password, user.email, user.role):
+        return {"message": "User registered successfully"}
+    else:
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+
 from fastapi import Path
 
 @app.get("/user/{user_id}/reports/summary", response_model=Dict[str, Any])
@@ -532,35 +591,17 @@ async def get_user_report_summary(user_id: str = Path(..., description="Username
         raise HTTPException(status_code=400, detail="Unknown user role")
 
 
-@app.post("/token", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    """Endpoint for user authentication and token generation"""
-    user = authenticate_user(form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=401,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user["username"], "role": user["role"]},
-        expires_delta=access_token_expires,
-    )
-    return {"access_token": access_token, "token_type": "bearer", "role" : user['role']}
-
-
-@app.post("/register", status_code=201)
-async def create_user(user: UserCreate):
-    """Endpoint to register a new user"""
-    if register_user(user.username, user.password, user.email, user.role):
-        return {"message": "User registered successfully"}
-    else:
-        raise HTTPException(status_code=400, detail="Username already exists")
-
-
 # ---- Patient Endpoints ----
-
+@app.post("/chatbot")
+async def get_medical_response(q: Query):
+    # Check if the query is being passed correctly
+    print("Received query:", q.query)  # Log the received query
+    if not q.query:
+        raise HTTPException(status_code=400, detail="Query cannot be empty.")
+    
+    # Call the chatbot function
+    result = chatbot(q.query)  # Use q.query here
+    return {"response":result}
 
 @app.post("/reports/analyze")
 async def analyze_report(
@@ -682,6 +723,29 @@ async def get_all_reports(
 
     return filtered_reports
 
+@app.delete("/reports/pending/remove-all")
+async def remove_all_pending_reviews(current_user: dict = Depends(get_current_doctor)):
+    """Endpoint to remove all pending reports for all users"""
+    conn = sqlite3.connect("medical_dashboard.db")
+    c = conn.cursor()
+    
+    # Mark pending reports as inactive instead of deleting them
+    c.execute(
+        """UPDATE user_reports 
+         SET is_active=0 
+         WHERE doctor_approval=0"""
+    )
+    
+    # Get count of affected rows
+    affected_rows = c.rowcount
+    
+    conn.commit()
+    conn.close()
+    
+    return {
+        "message": "All pending reviews have been removed",
+        "removed_count": affected_rows
+    }
 
 # Basic health check endpoint
 @app.get("/health")

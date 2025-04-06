@@ -32,6 +32,8 @@ const Dashboard: React.FC = () => {
   const pendingReports = reports.filter(report => !report.doctor_approval).length;
   const approvedReports = reports.filter(report => report.doctor_approval).length;
 
+  var pendingNumber = pendingReports;
+
   const role = user.role;
   //console.log("===============================user is " )
   //console.log(user)
@@ -41,7 +43,7 @@ const Dashboard: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  var[PReports, setPReports] = useState(1);
+  var[PReports, setPReports] = useState(pendingNumber);
   var[AReports, setAReports] = useState(0);
 
   return (
